@@ -1,7 +1,7 @@
 # TODO
 - [ ] implement processing args 
-	- [ ] ipc_sendfile
-	- [ ] ipc_receivefile
+	- [x] ipc_sendfile
+	- [x] ipc_receivefile
 - [ ] implement --help
 	- [ ] ipc_sendfile
 	- [ ] ipc_receivefile
