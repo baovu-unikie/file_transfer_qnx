@@ -1,0 +1,19 @@
+# TODO
+- [ ] implement processing args 
+	- [ ] ipc_sendfile
+	- [ ] ipc_receivefile
+- [ ] implement --help
+	- [ ] ipc_sendfile
+	- [ ] ipc_receivefile
+- [ ] implement --message
+	- [ ] ipc_sendfile
+	- [ ] ipc_receivefile
+- [ ] implement --queue
+	- [ ] ipc_sendfile
+	- [ ] ipc_receivefile
+- [ ] implement --pipe
+	- [ ] ipc_sendfile
+	- [ ] ipc_receivefile
+- [ ] implement --shm (shared memory)
+	- [ ] ipc_sendfile
+	- [ ] ipc_receivefile
