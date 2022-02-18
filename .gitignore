@@ -1,0 +1,14 @@
+# Ignore everything
+*
+# Except for
+!.gitignore
+!.cproject
+!.project
+!ipc_sendfile.c
+!ipc_receivefile.c
+!ipc_common.c
+!ipc_common.h
+!Makefile
+!README.md
+
+
