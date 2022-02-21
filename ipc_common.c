@@ -110,13 +110,11 @@ void receive_msg(char *server_ptr, FILE *fd) {
 void receive_pipe(char *pipe_ptr, FILE *fd) {
 	int pd = 0;
 	int read_count = 1;
-	printf("Waiting for [%s] pipe...\n",pipe_ptr);
-	while(pd == 0 || pd == -1)
-	{
+	printf("Waiting for [%s] pipe...\n", pipe_ptr);
+	while (pd == 0 || pd == -1) {
 		pd = open(pipe_ptr, O_RDONLY);
 	}
-	while(read_count != 0)
-	{
+	while (read_count != 0) {
 		char *data = malloc(PIPE_BUF);
 		read_count = read(pd, data, PIPE_BUF);
 		write_to_file(data, read_count, fd);
@@ -187,30 +185,27 @@ void send_pipe(char *pipe_ptr, FILE *fd) {
 	// make sure old pipe is removed
 	remove(pipe_ptr);
 	// create a pipe
-	if (mkfifo(pipe_ptr, 0777) > 0)
-	{
+	if (mkfifo(pipe_ptr, 0777) > 0) {
 		perror("mkfifo");
 		exit(EXIT_FAILURE);
 	}
-	printf("Created a pipe named [%s] and waiting for client...\n",pipe_ptr);
+	printf("Created a pipe named [%s] and waiting for client...\n", pipe_ptr);
 	// open the pipe
 	pd = open(pipe_ptr, O_RDWR);
-	if(pd == -1)
-	{
+	if (pd == -1) {
 		perror("open");
 		exit(EXIT_FAILURE);
 	}
 
-	while (sent < file_size)
-	{
+	while (sent < file_size) {
 		char *buf = malloc(PIPE_BUF);
 		// read data from the file
 		long int read = fread(buf, 1, PIPE_BUF, fd);
 		// write it to the pipe
 		long int written = write(pd, buf, read);
-		if(read == written)
+		if (read == written)
 			sent += read;
-		else{
+		else {
 			perror("write");
 			fclose(fd);
 			free(buf);
@@ -220,11 +215,11 @@ void send_pipe(char *pipe_ptr, FILE *fd) {
 		free(buf);
 	}
 
-	if(file_size == sent)
+	if (file_size == sent)
 		printf("File sent | File size = %ld byte(s).\n", file_size);
-	else
-	{
-		printf("Connection lost. Interrupted transfer. Removed [%s]\n", pipe_ptr);
+	else {
+		printf("Connection lost. Interrupted transfer. Removed [%s]\n",
+				pipe_ptr);
 		remove(pipe_ptr);
 		fclose(fd);
 		exit(EXIT_FAILURE);
