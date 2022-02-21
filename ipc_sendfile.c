@@ -16,9 +16,9 @@ int main(int argc, char *argv[]) {
 		// options without arguments
 		if ((!strcmp(argv[i], "--help") || !strcmp(argv[i], "-h"))
 				&& protocol == NONE)
-			usage(RECEIVE_USAGE);
+			usage(SEND_USAGE);
 		else if (i + 1 == argc)
-			usage(RECEIVE_USAGE);
+			usage(SEND_USAGE);
 		// options with arguments
 		else if ((!strcmp(argv[i], "--message") || !strcmp(argv[i], "-m"))
 				&& protocol == NONE) {
@@ -43,7 +43,7 @@ int main(int argc, char *argv[]) {
 				return EXIT_FAILURE;
 			}
 		} else
-			usage(RECEIVE_USAGE);
+			usage(SEND_USAGE);
 	}
 
 	if (protocol == MSG)
@@ -51,7 +51,7 @@ int main(int argc, char *argv[]) {
 	if (protocol == QUEUE)
 		send_queue();
 	if (protocol == PIPE)
-		send_pipe();
+		send_pipe(argv[protocol_arg_index], fp);
 	if (protocol == SHM)
 		send_shm();
 
