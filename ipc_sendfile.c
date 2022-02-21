@@ -51,7 +51,7 @@ int main(int argc, char *argv[]) {
 	if (protocol == QUEUE)
 		send_queue();
 	if (protocol == PIPE)
-		send_pipe();
+		send_pipe(argv[protocol_arg_index], fp);
 	if (protocol == SHM)
 		send_shm();
 

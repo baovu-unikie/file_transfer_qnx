@@ -8,6 +8,7 @@
 #include <sys/neutrino.h>
 #include <sys/dispatch.h>
 #include <sys/iofunc.h>
+#include <unistd.h>
 
 #define MAX_BUFFER_SIZE 51200
 #define MSG_DATA_FSIZE_TYPE (_IO_MAX + 3)
@@ -32,12 +33,13 @@ typedef union {
 } msg_buf_t;
 
 long int find_file_size(FILE *fd);
+void error_handler(void* source);
 void receive_msg(char *server_ptr, FILE *fd);
-void receive_pipe();
+void receive_pipe(char *pipe_ptr, FILE *fd);
 void receive_queue();
 void receive_shm();
 void send_msg(char *server_ptr, FILE *fd);
-void send_pipe();
+void send_pipe(char *pipe_ptr, FILE *fd);
 void send_queue();
 void send_shm();
 void usage(usage_t usage);
