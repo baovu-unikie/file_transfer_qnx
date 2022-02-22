@@ -254,7 +254,7 @@ void usage(usage_t usage) {
 	printf("\e[1mDESCRIPTION\e[0m\n");
 	printf("  %s\n", description);
 	printf("    Available [PROTOCOL]\n");
-	printf("      -m | --message [SERVER_NAME]. Example: -p myserver\n");
+	printf("      -m | --message [SERVER_NAME]. Example: -m myserver\n");
 	printf("      -q | --queue []\n");
 	printf("      -p | --pipe [NAMED_PIPE]. Example: -p /tmp/myfifo \n");
 	printf("      -s | --shm []\n");
