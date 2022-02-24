@@ -116,8 +116,20 @@ void receive_pipe(char *pipe_ptr, FILE *fd) {
 	}
 	while (read_count != 0) {
 		char *data = malloc(PIPE_BUF);
-		read_count = read(pd, data, PIPE_BUF);
-		write_to_file(data, read_count, fd);
+		if (data != NULL) {
+			read_count = read(pd, data, PIPE_BUF);
+			if (read_count > -1)
+				write_to_file(data, read_count, fd);
+			else {
+				perror("read");
+				free(data);
+				exit(EXIT_FAILURE);
+			}
+		} else {
+			perror("malloc");
+			free(data);
+			exit(EXIT_FAILURE);
+		}
 		free(data);
 	}
 	printf("File received | File size = %ld byte(s)\n", find_file_size(fd));
@@ -125,10 +137,49 @@ void receive_pipe(char *pipe_ptr, FILE *fd) {
 	remove(pipe_ptr);
 	fclose(fd);
 }
-void receive_queue() {
+
+void receive_queue(char *queue_ptr, FILE *fd) {
+	mqd_t md = -1;
+	int read_count = 0;
+	int error_code = 0;
+	struct mq_attr new_attr;
+
+	printf("Waiting for [%s] queue...\n", queue_ptr);
+	while (md == -1) {
+		md = mq_open(queue_ptr, O_RDONLY, 0777, NULL);
+	}
+
+	sleep(1); // waiting for ipc_sendfile to send msg to the queue
+
+	// add O_NONBLOCK attribute to allow mq_receive return immediately with
+	// an error code (EAGAIN) instead of blocking forever
+	mq_getattr(md, &new_attr);
+	new_attr.mq_flags = O_RDONLY | O_NONBLOCK;
+	mq_setattr(md, &new_attr, NULL);
+
+	while (error_code != EAGAIN) {
+		char *data = malloc(MQ_MSGSIZE);
+		if (data != NULL) {
+			read_count = mq_receive(md, data, MQ_MSGSIZE, NULL);
+			error_code = errno;
+			if (read_count > 0)
+				write_to_file(data, read_count, fd);
+		} else {
+			perror("malloc");
+			free(data);
+			exit(EXIT_FAILURE);
+		}
+		free(data);
+	}
+	printf("File received | File size = %ld byte(s)\n", find_file_size(fd));
+	mq_close(md);
+	mq_unlink(queue_ptr);
+	fclose(fd);
 }
+
 void receive_shm() {
 }
+
 void send_msg(char *server_ptr, FILE *fd) {
 	long int file_size = find_file_size(fd);
 	long int sent = 0;
@@ -159,24 +210,31 @@ void send_msg(char *server_ptr, FILE *fd) {
 
 	// send file content
 	while (sent < file_size) {
-		char *buf = malloc(MAX_BUFFER_SIZE);
-		msg.msg_type = MSG_DATA_TYPE;
-		long int read = fread(buf, 1, MAX_BUFFER_SIZE, fd);
-		msg.data_size = read;
-		SETIOV(&siov[0], &msg, sizeof(msg));
-		SETIOV(&siov[1], buf, msg.data_size);
-		status = MsgSendvs(coid, siov, 2, NULL, 0);
-		if (status == -1) {
-			perror("MsgSendvs");
+		char *buf = malloc(MSG_BUFFER_SIZE);
+		if (buf != NULL) {
+			msg.msg_type = MSG_DATA_TYPE;
+			long int read = fread(buf, 1, MSG_BUFFER_SIZE, fd);
+			msg.data_size = read;
+			SETIOV(&siov[0], &msg, sizeof(msg));
+			SETIOV(&siov[1], buf, msg.data_size);
+			status = MsgSendvs(coid, siov, 2, NULL, 0);
+			if (status == -1) {
+				perror("MsgSendvs");
+				exit(EXIT_FAILURE);
+			}
+			sent += read;
+		} else {
+			perror("malloc");
+			free(buf);
 			exit(EXIT_FAILURE);
 		}
-		sent += read;
 		free(buf);
 	}
 	printf("File sent.\n");
 	fclose(fd);
 
 }
+
 void send_pipe(char *pipe_ptr, FILE *fd) {
 	int pd = 0;
 	long int sent = 0;
@@ -199,17 +257,23 @@ void send_pipe(char *pipe_ptr, FILE *fd) {
 
 	while (sent < file_size) {
 		char *buf = malloc(PIPE_BUF);
-		// read data from the file
-		long int read = fread(buf, 1, PIPE_BUF, fd);
-		// write it to the pipe
-		long int written = write(pd, buf, read);
-		if (read == written)
-			sent += read;
-		else {
-			perror("write");
-			fclose(fd);
+		if (buf != NULL) {
+			// read data from the file
+			long int read = fread(buf, 1, PIPE_BUF, fd);
+			// write it to the pipe
+			long int written = write(pd, buf, read);
+			if (read == written)
+				sent += read;
+			else {
+				perror("write");
+				fclose(fd);
+				free(buf);
+				remove(pipe_ptr);
+				exit(EXIT_FAILURE);
+			}
+		} else {
+			perror("malloc");
 			free(buf);
-			remove(pipe_ptr);
 			exit(EXIT_FAILURE);
 		}
 		free(buf);
@@ -227,11 +291,66 @@ void send_pipe(char *pipe_ptr, FILE *fd) {
 	fclose(fd);
 }
 
-void send_queue() {
+void send_queue(char *queue_ptr, FILE *fd) {
+	mqd_t md;
+	long int file_size = find_file_size(fd);
+	long int sent = 0;
+	// remove old queue
+	mq_unlink(queue_ptr);
+	// open a message queue using default attributes
+	md = mq_open(queue_ptr, O_CREAT | O_EXCL | O_WRONLY, 0777, NULL);
+	if (md == -1) {
+		perror("mq_open");
+		exit(EXIT_FAILURE);
+	}
+	printf("Created a queue named [%s]\n", queue_ptr);
+
+	while (sent < file_size) {
+		char *buf = malloc(MQ_MSGSIZE);
+		if (buf != NULL) {
+			long int read = fread(buf, 1, MQ_MSGSIZE, fd);
+			int error_check = mq_send(md, buf, read, MQ_PRIO_MAX - 1);
+			if (error_check == -1) {
+				perror("mq_send");
+				free(buf);
+				exit(EXIT_FAILURE);
+			}
+			sent += read;
+		} else {
+			perror("malloc");
+			free(buf);
+			exit(EXIT_FAILURE);
+		}
+		free(buf);
+	}
+
+	if (file_size == sent) {
+		printf("File is sent to the queue.\n");
+		printf("Waiting for client to pick up...\n");
+		int check_empty = -1;
+		struct mq_attr attr;
+		// check if the queue is empty
+		while (check_empty != 0) {
+			mq_getattr(md, &attr);
+			check_empty = attr.mq_curmsgs;
+		}
+		printf("Client picked it up | File size = %ld byte(s).\n", file_size);
+	} else {
+		printf("Connection lost. Interrupted transfer. Removed [%s]\n",
+				queue_ptr);
+		mq_close(md);
+		mq_unlink(queue_ptr);
+		fclose(fd);
+		exit(EXIT_FAILURE);
+	}
+	mq_close(md);
+	fclose(fd);
 }
+
 void send_shm() {
 }
-void usage(usage_t usage) {
+
+void usage(usage_t usage, int help) {
 	char cmd[20];
 	char description[65];
 	char example[50];
@@ -255,11 +374,15 @@ void usage(usage_t usage) {
 	printf("  %s\n", description);
 	printf("    Available [PROTOCOL]\n");
 	printf("      -m | --message [SERVER_NAME]. Example: -m myserver\n");
-	printf("      -q | --queue []\n");
-	printf("      -p | --pipe [NAMED_PIPE]. Example: -p /tmp/myfifo \n");
+	printf("      -q | --queue [QUEUE_NAME]. Example: -q myqueue\n");
+	printf("      -p | --pipe [PIPE_NAME]. Example: -p /tmp/myfifo\n");
 	printf("      -s | --shm []\n");
 	printf("\e[1mEXAMPLE\e[0m\n");
 	printf("  %s\n", example);
+
+	if (help != 1)
+		exit(EXIT_FAILURE);
+
 }
 
 void write_to_file(char *data, size_t data_size, FILE *fd) {

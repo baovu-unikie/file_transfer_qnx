@@ -8,17 +8,16 @@ int main(int argc, char *argv[]) {
 	unsigned int protocol_arg_index = 0;
 	FILE *fp;
 
-	if (argc != 5 && argc != 2) {
-		usage(RECEIVE_USAGE);
-	}
+	if (argc != 5 && argc != 2)
+		usage(RECEIVE_USAGE, 0);
 
 	for (int i = 1; i < argc; i++) {
 		// options without arguments
 		if ((!strcmp(argv[i], "--help") || !strcmp(argv[i], "-h"))
 				&& protocol == NONE)
-			usage(RECEIVE_USAGE);
+			usage(RECEIVE_USAGE, 1);
 		else if (i + 1 == argc)
-			usage(RECEIVE_USAGE);
+			usage(RECEIVE_USAGE, 0);
 		// options with arguments
 		else if ((!strcmp(argv[i], "--message") || !strcmp(argv[i], "-m"))
 				&& protocol == NONE) {
@@ -43,13 +42,13 @@ int main(int argc, char *argv[]) {
 				return EXIT_FAILURE;
 			}
 		} else
-			usage(RECEIVE_USAGE);
+			usage(RECEIVE_USAGE, 0);
 	}
 
 	if (protocol == MSG)
 		receive_msg(argv[protocol_arg_index], fp);
 	if (protocol == QUEUE)
-		receive_queue();
+		receive_queue(argv[protocol_arg_index], fp);
 	if (protocol == PIPE)
 		receive_pipe(argv[protocol_arg_index], fp);
 	if (protocol == SHM)
