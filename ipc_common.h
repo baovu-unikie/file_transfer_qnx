@@ -57,6 +57,7 @@ typedef struct
 	pthread_cond_t cond;
 	size_t data_version;
 	size_t data_size;
+	size_t shared_mem_size;
 	char data_ap[0]; // data access point
 } shm_data_t;
 

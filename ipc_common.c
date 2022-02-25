@@ -320,6 +320,7 @@ void receive_shm(char *shm_name, char *shm_size, int fd)
 		shm_unlink_exit(shm_name);
 	}
 	printf("Get the shared memory pointer [%p].\n", shm_ptr);
+	printf("Waiting for data on [/dev/shmem%s].\n", shm_name);
 
 	while (is_end != 1)
 	{
@@ -332,6 +333,11 @@ void receive_shm(char *shm_name, char *shm_size, int fd)
 				perror("pthread_cond_wait");
 				shm_unlink_exit(shm_name);
 			}
+		}
+		if(shm_ptr->shared_mem_size != shared_mem_size)
+		{
+			printf("Invalid shared memory size. Should be equal %ld byte(s)\n", shm_ptr->shared_mem_size );
+			shm_unlink_exit(shm_name);
 		}
 
 		if (shm_ptr->data_size != 0)
@@ -628,6 +634,7 @@ void send_shm(char *shm_name, char *shm_size, int fd)
 	// set flags
 	shm_ptr->is_init = 1; // is initialized
 	shm_ptr->is_read = 1; // to start the sending process
+	shm_ptr->shared_mem_size = shared_mem_size;
 
 	while (is_end != -1)
 	{
