@@ -37,13 +37,13 @@ shm_data_t* get_shared_memory_pointer(char *shm_name, unsigned num_retries, int 
 	int fd;
 
 	printf("Trying to open the shared memory named %s\n", shm_name);
-	for (tries = 0;;)
+	for (tries = 1;;)
 	{
 		fd = shm_open(shm_name, O_RDWR, 0660);
 		if (fd != -1)
 			break;
-		++tries;
 		printf("Tried %ld time(s)\n", tries);
+		++tries;
 		if (tries > num_retries)
 		{
 			perror("shmn_open");
@@ -52,8 +52,8 @@ shm_data_t* get_shared_memory_pointer(char *shm_name, unsigned num_retries, int 
 		sleep(1);
 	}
 
-	printf("Trying to map the shared memory object named [/dev/shmem%s].\n", shm_name);
-	for (tries = 0;;)
+	printf("Trying to map the shared memory object at [/dev/shmem%s].\n", shm_name);
+	for (tries = 1;;)
 	{
 		ptr = (shm_data_t*)mmap64(NULL, shm_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
 		if (ptr != MAP_FAILED)
@@ -70,8 +70,8 @@ shm_data_t* get_shared_memory_pointer(char *shm_name, unsigned num_retries, int 
 
 	(void) close(fd);
 
-	printf("Waiting for the shared object to be initialized.\n", shm_name);
-	for (tries = 0;;)
+	printf("Waiting for the shared object to be initialized...\n", shm_name);
+	for (tries = 1;;)
 	{
 		if (ptr->is_init)
 			break;
@@ -641,6 +641,7 @@ void send_shm(char *shm_name, char *shm_size, int fd)
 	shm_ptr->is_read = 1; // to start the sending process
 	shm_ptr->shared_mem_size = shared_mem_size;
 
+	printf("Waiting for ipc_recievefile...\n");
 	while (is_end != -1)
 	{
 		lock_mutex(&shm_ptr->mutex, shm_name);
