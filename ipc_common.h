@@ -23,8 +23,8 @@
 #define MQ_MAXMSG 1024
 #define MQ_MSGSIZE 4096
 
-// shm: set limit size (for now only working with 4kB)
-#define SHM_LIMIT_IN_KB 4
+// shm: set limit size
+#define SHM_LIMIT_IN_KB 1024
 
 typedef enum
 {

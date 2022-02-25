@@ -36,12 +36,14 @@ shm_data_t* get_shared_memory_pointer(char *shm_name, unsigned num_retries, int 
 	shm_data_t *ptr;
 	int fd;
 
+	printf("Trying to open the shared memory named %s\n", shm_name);
 	for (tries = 0;;)
 	{
 		fd = shm_open(shm_name, O_RDWR, 0660);
 		if (fd != -1)
 			break;
 		++tries;
+		printf("Tried %ld time(s)\n", tries);
 		if (tries > num_retries)
 		{
 			perror("shmn_open");
@@ -50,13 +52,14 @@ shm_data_t* get_shared_memory_pointer(char *shm_name, unsigned num_retries, int 
 		sleep(1);
 	}
 
-	printf("Opened a shared memory object named [/dev/shmem%s].\n", shm_name);
+	printf("Trying to map the shared memory object named [/dev/shmem%s].\n", shm_name);
 	for (tries = 0;;)
 	{
 		ptr = (shm_data_t*)mmap64(NULL, shm_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
 		if (ptr != MAP_FAILED)
 			break;
 		++tries;
+		printf("Tried %ld time(s)\n", tries);
 		if (tries > num_retries)
 		{
 			perror("mmap64");
@@ -67,11 +70,13 @@ shm_data_t* get_shared_memory_pointer(char *shm_name, unsigned num_retries, int 
 
 	(void) close(fd);
 
+	printf("Waiting for the shared object to be initialized.\n", shm_name);
 	for (tries = 0;;)
 	{
 		if (ptr->is_init)
 			break;
 		++tries;
+		printf("Check initialize status %ld time(s)\n", tries);
 		if (tries > num_retries)
 		{
 			fprintf(stderr, "Shared memory is not initialized\n");
@@ -296,7 +301,7 @@ void receive_shm(char *shm_name, char *shm_size, int fd)
 {
 	int ret = 0;
 	int is_end = 0;
-	int num_of_tries = 100;
+	int num_of_tries = 10;
 	size_t last_version = 0;
 	size_t shared_mem_size = get_int(shm_size) * 1024;
 	shm_data_t *shm_ptr;
@@ -313,7 +318,7 @@ void receive_shm(char *shm_name, char *shm_size, int fd)
 		usage(RECEIVE_USAGE, 0);
 	}
 
-	shm_ptr = get_shared_memory_pointer(shm_name, shared_mem_size, num_of_tries);
+	shm_ptr = get_shared_memory_pointer(shm_name, num_of_tries, shared_mem_size);
 	if (shm_ptr == MAP_FAILED)
 	{
 		fprintf(stderr, "Unable to access shared object /dev/shmem%s\n", shm_name);
