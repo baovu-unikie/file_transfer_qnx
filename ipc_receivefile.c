@@ -8,7 +8,7 @@ int main(int argc, char *argv[])
 	protocol_t protocol = NONE;
 	unsigned int name_index = 0;
 	unsigned int size_index = 0;
-	int fd;
+	int fd = 0;
 
 	if (argc != 5 && argc != 2 && argc != 6)
 		usage(RECEIVE_USAGE, 0);
@@ -42,7 +42,8 @@ int main(int argc, char *argv[])
 		}
 		else if (!strcmp(argv[i], "--file") || !strcmp(argv[i], "-f"))
 		{
-			fd = open64(argv[++i], O_RDWR | O_CREAT, 0660);
+			remove(argv[i+1]);
+			fd = open64(argv[++i], O_RDWR | O_CREAT | O_EXCL , 0660);
 			if (fd == -1)
 			{
 				perror("open64");
